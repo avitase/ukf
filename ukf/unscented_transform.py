@@ -5,7 +5,7 @@ import torch
 def sigma_points(mu, cov, *, kappa):
     b, n = mu.shape
     L = torch.cholesky(cov)
-    X = mu.unsqueeze(b).expand(b, n, 2 * n + 1)
+    X = mu.unsqueeze(2).expand(b, n, 2 * n + 1)
 
     w = np.sqrt(n - kappa)
 
@@ -36,7 +36,7 @@ def unscented_transform(mu, cov, *, func, kappa=None):
     assert mu2.ndim == 2
     assert mu2.shape == mu.shape
 
-    R = Y - mu2.unsqueeze(2).expand(2, n, 2 * n + 1)
+    R = Y - mu2.unsqueeze(2).expand(b, n, 2 * n + 1)
     cov2 = torch.matmul(alpha * R, R.transpose(1, 2))
     assert cov2.ndim == 3
     assert cov2.shape == cov.shape
