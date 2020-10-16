@@ -17,10 +17,7 @@ def sigma_points(mu, cov, *, kappa):
 
 
 def unscented_transform(mu, cov, *, func, kappa=None):
-    b, n, m = cov.shape
-    assert m == n
-    assert mu.ndim == 2
-    assert mu.shape == (b, n)
+    b, n, _ = cov.shape
 
     if kappa is None:
         kappa = 3. - n
@@ -30,15 +27,10 @@ def unscented_transform(mu, cov, *, func, kappa=None):
 
     X = sigma_points(mu, cov, kappa=kappa)
     Y = func(X)
-    assert Y.shape == (b, n, 2 * n + 1)
 
     mu2 = torch.sum(alpha * Y, dim=2)
-    assert mu2.ndim == 2
-    assert mu2.shape == mu.shape
 
     R = Y - mu2.unsqueeze(2).expand(b, n, 2 * n + 1)
     cov2 = torch.matmul(alpha * R, R.transpose(1, 2))
-    assert cov2.ndim == 3
-    assert cov2.shape == cov.shape
 
     return mu2, cov2
