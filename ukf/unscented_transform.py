@@ -7,7 +7,7 @@ def sigma_points(mu, cov, *, kappa):
     L = torch.cholesky(cov)
     X = mu.unsqueeze(2).expand(b, n, 2 * n + 1)
 
-    w = np.sqrt(n - kappa)
+    w = np.sqrt(n + kappa)
 
     dX = torch.zeros_like(X)
     dX[:, :, 1:n + 1] = L * w
