@@ -23,7 +23,7 @@ def unscented_transform(mu, cov, *, func, kappa=None):
     assert mu.shape == (b, n)
 
     if kappa is None:
-        kappa = 3 - n
+        kappa = 3. - n
 
     alpha = torch.ones(b, n, 2 * n + 1) / 2. / (n + kappa)
     alpha[:, :, 0] *= 2. * kappa
