@@ -3,6 +3,18 @@ import torch
 
 
 def sigma_points(mu, cov, *, kappa):
+    """
+    Calculates sigma points
+
+    Args:
+        mu: batched mean values
+        cov: batched covariance matrices
+        kappa: +/- sqrt(N + kappa) are used as weights
+
+    Returns:
+        Sigma points as batched (n, 2 * n + 1) matrix
+    """
+
     b, n = mu.shape
     L = torch.cholesky(cov)
     X = mu.unsqueeze(2).expand(b, n, 2 * n + 1)
@@ -17,6 +29,19 @@ def sigma_points(mu, cov, *, kappa):
 
 
 def unscented_transform(mu, cov, *, func, kappa=None):
+    """
+    Unscented transform of mean and covariance
+
+    Args:
+        mu: batched mean values
+        cov: batched covariance matrices
+        func: transform function
+        kappa: kappa / (N + kappa) and .5 / (N + kappa) are used as weights
+
+    Returns:
+        Unscented transform of mean and covariance
+    """
+
     b, n, _ = cov.shape
 
     if kappa is None:
