@@ -6,10 +6,16 @@ def sigma_points(mu, cov, *, kappa):
     """
     Calculates sigma points
 
+    Sigma points are estimated according to:
+     - x[:, 0] = mu
+     - x[:, i] = mu + sqrt(n + kappa) * col_i(L), i = 1,...,n
+     - x[:, i+n] = mu - sqrt(n + kappa) * col_i(L), i = 1,...,n
+    with cov = L @ L^T
+
     Args:
         mu: batched mean values
         cov: batched covariance matrices
-        kappa: +/- sqrt(N + kappa) are used as weights
+        kappa: kappa as used above
 
     Returns:
         Sigma points as batched (n, 2 * n + 1) matrix
@@ -32,14 +38,22 @@ def unscented_transform(mu, cov, *, func, kappa=None):
     """
     Unscented transform of mean and covariance
 
+    Unscented transform of mean and covariance is estimated according to:
+     - y[:, i] = func(sigma_point[i]), i=0,...,2n
+     - mu = sum_i(alpha[i] * y[:, i])
+     - cov = sum_i(alpha[i] * (y[:, i] - mu) @ (y[:, i] - mu)^T)
+    with weights:
+     - alpha[0] = kappa / (n + k)
+     - alpha[i] = .5 / (n + k), i=1,...,2n
+
     Args:
         mu: batched mean values
         cov: batched covariance matrices
         func: transform function
-        kappa: kappa / (N + kappa) and .5 / (N + kappa) are used as weights
+        kappa: kappa as used above (default value: 3 - n)
 
     Returns:
-        Unscented transform of mean and covariance
+        Batched unscented transform of means and covariances
     """
 
     b, n, _ = cov.shape
