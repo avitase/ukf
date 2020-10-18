@@ -19,7 +19,7 @@ def test_unscented_transform():
             mu = _gen_mu(n=n, batch_size=batch_size)
             cov = _gen_cov(n=n, batch_size=batch_size)
 
-        mu2, cov2 = ukf.unscented_transform(mu, cov, func=func)
+        mu2, cov2 = ukf.unscented_transform(func=func, mu=mu, cov=cov)
 
         assert mu2.ndim == 2
         assert mu2.shape == mu.shape

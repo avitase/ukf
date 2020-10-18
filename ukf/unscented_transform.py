@@ -34,7 +34,7 @@ def sigma_points(mu, cov, *, kappa):
     return X + dX
 
 
-def unscented_transform(mu, cov, *, func, kappa=None):
+def unscented_transform(func, *, mu, cov, kappa=None):
     """
     Unscented transform of mean and covariance
 
