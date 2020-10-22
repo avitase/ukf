@@ -19,10 +19,10 @@ def test_ukf():
 
         return torch.atan(s / (d - x[:, 0:1, :]))
 
-    state = torch.tensor([[0., 5.], ])
-    state_cov = torch.tensor([[[.01, 0.], [0., 1.]], ])
-    process_noise = torch.tensor([[[.1, 0.], [0., .1]], ])
-    measurement_noise = torch.tensor([[[.01, ]], ])
+    state = torch.tensor([[0., 5.], [1., 6.]])
+    state_cov = torch.tensor([[[.01, 0.], [0., 1.]], [[.09, 0.], [0., 4., ]]])
+    process_noise = torch.tensor([[[.1, 0.], [0., .1]], [[.2, 0.], [0., 3.]]])
+    measurement_noise = torch.tensor([[[.01, ]], [[.04, ]]])
 
     x, y, cov_x, cov_y, gain = ukf_step(motion_model=_motion_model,
                                         measurement_model=_measurement_model,
@@ -31,14 +31,14 @@ def test_ukf():
                                         process_noise=process_noise,
                                         measurement_noise=measurement_noise)
 
-    x_exp = torch.tensor([[2.5, 4.], ])
-    y_exp = torch.tensor([[.49], ])
-    cov_x_exp = torch.tensor([[[.36, .5], [.5, 1.1]], ])
-    cov_y_exp = torch.tensor([[[.01, ]], ])
-    gain_exp = torch.tensor([[[.4, ], [.55, ]], ])
+    x0_exp = torch.tensor([[2.5, 4.], ])
+    y0_exp = torch.tensor([[.49], ])
+    cov_x0_exp = torch.tensor([[[.36, .5], [.5, 1.1]], ])
+    cov_y0_exp = torch.tensor([[[.01, ]], ])
+    gain0_exp = torch.tensor([[[.4, ], [.55, ]], ])
 
-    assert torch.allclose(x, x_exp, atol=1e-04)
-    assert torch.allclose(y, y_exp, atol=1e-04)
-    assert torch.allclose(cov_x, cov_x_exp, atol=1e-04)
-    assert torch.allclose(cov_y, cov_y_exp, atol=1e-04)
-    assert torch.allclose(gain, gain_exp, atol=1e-02)
+    assert torch.allclose(x[0], x0_exp, atol=1e-04)
+    assert torch.allclose(y[0], y0_exp, atol=1e-04)
+    assert torch.allclose(cov_x[0], cov_x0_exp, atol=1e-04)
+    assert torch.allclose(cov_y[0], cov_y0_exp, atol=1e-04)
+    assert torch.allclose(gain[0], gain0_exp, atol=1e-02)
