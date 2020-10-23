@@ -36,9 +36,26 @@ def get_sigma_points(mu, cov, *, kappa=None):
     return mu.unsqueeze(2) + dx
 
 
-def get_weights(*, b, n, kappa):
-    w = torch.ones(b, 1, 2 * n + 1) / 2. / (n + kappa)
-    w[:, :, 0] *= 2. * kappa
+def get_weights(*, n, kappa):
+    """
+    Returns 2n+1 weights
+
+    If used in unscented transforms the value of kappa should be the same as used for estimating the
+    sigma points.
+    Weights are estimated according to:
+     - w[0] = kappa / (n + kappa)
+     - w[i] = .5 / (n + kappa), i = 1,...,2n+1
+
+    Args:
+        n: n
+        kappa: kappa
+
+    Returns:
+        2n+1 weights
+
+    """
+    w = torch.ones(2 * n + 1) / 2. / (n + kappa)
+    w[0] *= 2. * kappa
     return w
 
 
@@ -70,7 +87,7 @@ def ukf_step(*, motion_model, measurement_model, state, state_cov, process_noise
     Notes:
         Below listed are the shapes of the used tensors where (b, n, m) refer to the batch size,
         the state dimension, and the dimensionality of the measured features, respectively:
-         -            w: (b, 1, 2 * n + 1)
+         -            w: (1, 1, 2 * n + 1)
          - sigma_points: (b, n, 2 * n + 1)
          -           xs: (b, n, 2 * n + 1)
          -            x: (b, n)
@@ -88,7 +105,7 @@ def ukf_step(*, motion_model, measurement_model, state, state_cov, process_noise
     if kappa is None:
         kappa = 3. - n
 
-    w = get_weights(b=b, n=n, kappa=kappa)
+    w = get_weights(n=n, kappa=kappa).unsqueeze(0).unsqueeze(1)
 
     # compute sigma points
     sigma_points = get_sigma_points(state, state_cov, kappa=kappa)
