@@ -44,6 +44,35 @@ def get_weights(*, b, n, kappa):
 
 def ukf_step(*, motion_model, measurement_model, state, state_cov, process_noise, measurement_noise,
              kappa=None):
+    """
+    Args:
+        motion_model:
+        measurement_model:
+        state:
+        state_cov:
+        process_noise:
+        measurement_noise:
+        kappa:
+
+    Returns:
+
+    Notes:
+        Below listed are the shapes of the used tensors where (b, n, m) refer to the batch size,
+        the state dimension, and the dimensionality of the measured features, respectively:
+         -            w: (b, 1, 2 * n + 1)
+         - sigma_points: (b, n, 2 * n + 1)
+         -           xs: (b, n, 2 * n + 1)
+         -            x: (b, n)
+         -        res_x: (b, n, 2 * n + 1)
+         -        cov_x: (b, n, n)
+         -           ys: (b, m, 2 * n + 1)
+         -            y: (b, m)
+         -        res_y: (b, m, 2 * n + 1)
+         -        cov_y: (b, m, m)
+         -        res_s: (b, n, 2 * n + 1)
+         -       cov_sy: (b, n, m)
+         -         gain: (b, n, m)
+    """
     b, n = state.shape
     if kappa is None:
         kappa = 3. - n
