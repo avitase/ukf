@@ -58,7 +58,7 @@ def ukf_step(*, motion_model, measurement_model, state, state_cov, process_noise
         state_cov: state covariance of type (b, n, n) tensor
         process_noise: process noise of type (b, n, n) tensor
         measurement_noise: measurement noise of type (b, m, m) tensor
-        kappa: kappa as used in get_weights (default value: 3 - n)
+        kappa: kappa as used in get_weights and get_sigma_points (default value: 3 - n)
 
     Returns:
         x: predicted mean of state
