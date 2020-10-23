@@ -47,8 +47,8 @@ def get_weights(*, n, kappa):
      - w[i] = .5 / (n + kappa), i = 1,...,2n+1
 
     Args:
-        n: n
-        kappa: kappa
+        n: n as used above
+        kappa: kappa as used above
 
     Returns:
         2n+1 weights
