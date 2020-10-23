@@ -66,7 +66,7 @@ def ukf_step(*, motion_model, measurement_model, state, state_cov, process_noise
 
     State and state covariance are propagated according to a motion and measurement model.
     The returned values can be used together with an actual measurement to compute the corrected
-    mean and covariance.
+    mean and covariance (cf. kf_correct).
 
     Args:
         motion_model: function that propagates (b, n, 2 * n + 1) data according to motion model
