@@ -45,16 +45,27 @@ def get_weights(*, b, n, kappa):
 def ukf_step(*, motion_model, measurement_model, state, state_cov, process_noise, measurement_noise,
              kappa=None):
     """
+    UKF step
+
+    State and state covariance are propagated according to a motion and measurement model.
+    The returned values can be used together with an actual measurement to compute the corrected
+    mean and covariance.
+
     Args:
-        motion_model:
-        measurement_model:
-        state:
-        state_cov:
-        process_noise:
-        measurement_noise:
-        kappa:
+        motion_model: function that propagates (b, n, 2 * n + 1) data according to motion model
+        measurement_model: function that predicts (b, m) measurements from (b, n, 2 * n + 1) data
+        state: state of type (b, n) tensor
+        state_cov: state covariance of type (b, n, n) tensor
+        process_noise: process noise of type (b, n, n) tensor
+        measurement_noise: measurement noise of type (b, m, m) tensor
+        kappa: kappa as used in get_weights (default value: 3 - n)
 
     Returns:
+        x: predicted mean of state
+        y: estimated mean of predicted measurements
+        cov_x: predicted state covariance
+        cov_y: estimated covariance of predicted measurements
+        gain: Kalman gain
 
     Notes:
         Below listed are the shapes of the used tensors where (b, n, m) refer to the batch size,
