@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from ukf import ukf_step, ukf_correct
+from ukf import ukf_step, kf_correct
 
 
 class UKF:
@@ -51,10 +51,10 @@ class UKF:
                                             state_cov=self.state_cov,
                                             process_noise=self.process_noise,
                                             measurement_noise=self.measurement_noise)
-        self.state, self.state_cov = ukf_correct(measurement,
-                                                 x=x,
-                                                 y_predicted=y,
-                                                 cov_x=cov_x,
-                                                 cov_y=cov_y,
-                                                 gain=gain)
+        self.state, self.state_cov = kf_correct(measurement,
+                                                x=x,
+                                                y_predicted=y,
+                                                cov_x=cov_x,
+                                                cov_y=cov_y,
+                                                gain=gain)
         return self.state, measurement - y

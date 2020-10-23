@@ -137,7 +137,25 @@ def ukf_step(*, motion_model, measurement_model, state, state_cov, process_noise
     return x, y, cov_x, cov_y, gain
 
 
-def ukf_correct(y_measured, *, x, y_predicted, cov_x, cov_y, gain):
+def kf_correct(y_measured, *, x, y_predicted, cov_x, cov_y, gain):
+    """
+    KF correction step
+
+    Applies KF correction step to batched n-dimensional state and state covariance, given a new
+    (batched) m-dimensional measurement.
+
+    Args:
+        y_measured: new measurement as (b, m) tensor
+        x: predicted mean of state as (b, n) tensor
+        y_predicted: estimated mean of predicted measurements as (b, m) tensor
+        cov_x: predicted state covariance as (b, n, n) tensor
+        cov_y: estimated covariance of predicted measurements as (b, m, m) tensor
+        gain: Kalman gain as (b, n, m) tensor
+
+    Returns:
+        Corrected mean and covariance
+
+    """
     x_new = x + torch.matmul(gain, (y_measured - y_predicted).unsqueeze(2)).squeeze(2)
     cov_x_new = cov_x - torch.matmul(gain, torch.matmul(cov_y, gain.transpose(1, 2)))
     return x_new, cov_x_new
