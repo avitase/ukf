@@ -5,15 +5,15 @@ from ukf import ukf_step, kf_correct
 
 
 class UKF:
-    def __init__(self, *, b):
-        self.state = torch.zeros(3).repeat(b, 1)
-        self.state_cov = torch.eye(3).repeat(b, 1, 1)
-        self.process_noise = torch.tensor([
-            [0., 0., 0.],
-            [0., 0., 0.],
-            [0., 0., np.pi / 6.],
-        ]).repeat(b, 1, 1)
-        self.measurement_noise = (torch.eye(2) * .5).repeat(b, 1, 1)
+    def __init__(self, *, phi_noise):
+        self.b, = phi_noise.shape
+        self.n = 3
+        self.m = 2
+
+        self.state = torch.zeros(self.n).repeat(self.b, 1)
+        self.state_cov = torch.eye(self.n).repeat(self.b, 1, 1)
+        self.phi_noise = phi_noise
+        self.measurement_noise = (torch.eye(self.m) * .5).repeat(self.b, 1, 1)
 
     @staticmethod
     def motion_model(state):
@@ -45,11 +45,14 @@ class UKF:
         return x[:, 0:2]
 
     def step(self, measurement):
+        process_noise = torch.zeros(self.b, self.n, self.n)
+        process_noise[:, 2, 2] = self.phi_noise
+
         x, y, cov_x, cov_y, gain = ukf_step(motion_model=UKF.motion_model,
                                             measurement_model=UKF.measurement_model,
                                             state=self.state,
                                             state_cov=self.state_cov,
-                                            process_noise=self.process_noise,
+                                            process_noise=process_noise,
                                             measurement_noise=self.measurement_noise)
         self.state, self.state_cov = kf_correct(measurement,
                                                 x=x,
@@ -57,4 +60,5 @@ class UKF:
                                                 cov_x=cov_x,
                                                 cov_y=cov_y,
                                                 gain=gain)
-        return self.state, measurement - y
+        error = measurement - y
+        return x, torch.sum(error ** 2, dim=1)
