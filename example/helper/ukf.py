@@ -1,26 +1,31 @@
 import numpy as np
 import torch
 
-from ukf import ukf_step, kf_correct
+import ukf
 
 
-class UKF:
-    def __init__(self, *, phi_noise):
-        self.b, = phi_noise.shape
-        self.n = 3
-        self.m = 2
+class SimpleUKFCell(ukf.UKFCell):
+    def __init__(self, *, batch_size: int, v: torch.Tensor):
+        super(SimpleUKFCell, self).__init__(batch_size=batch_size, state_size=3, measurement_size=2)
+        self.v = v
 
-        self.state = torch.zeros(self.n).repeat(self.b, 1)
-        self.state_cov = torch.eye(self.n).repeat(self.b, 1, 1)
-        self.phi_noise = phi_noise
-        self.measurement_noise = (torch.eye(self.m) * .5).repeat(self.b, 1, 1)
+    def motion_model(self, states: torch.Tensor) -> torch.Tensor:
+        """
+        Applies motion model to batches of sigma points
 
-    @staticmethod
-    def motion_model(state):
-        x = state[:, 0]
-        y = state[:, 1]
-        phi = state[:, 2]
-        v = torch.tensor([1., 2., 3., 4.]).unsqueeze(1)
+        Applies motion model to b batches of n sigma points, where each sigma point (state)
+        has dimensionality m (typically: n = 2 * m + 1).
+
+        Args:
+            states: sigma points as (b, m, n) tensors
+
+        Returns:
+            Advanced states
+        """
+        x = states[:, 0]
+        y = states[:, 1]
+        phi = states[:, 2]
+        v = self.v.unsqueeze(1)
 
         # apply same correction to all sigma points
         phi_mean = phi[:, 0]
@@ -33,32 +38,29 @@ class UKF:
         vx = v * cos_phi
         vy = v * sin_phi
 
-        update = torch.empty_like(state)
+        update = torch.empty_like(states)
         update[:, 0] = x + vx
         update[:, 1] = y + vy
         update[:, 2] = phi
 
         return update
 
-    @staticmethod
-    def measurement_model(x):
-        return x[:, 0:2]
+    def measurement_model(self, xs: torch.Tensor) -> torch.Tensor:
+        """
+        Applies measurement model to batches of sigma points
 
-    def step(self, measurement):
-        process_noise = torch.zeros(self.b, self.n, self.n)
-        process_noise[:, 2, 2] = self.phi_noise
+        Applies measurement model to b batches of n sigma points, where each sigma point (state)
+        has dimensionality m (typically: n = 2 * m + 1).
 
-        x, y, cov_x, cov_y, gain = ukf_step(motion_model=UKF.motion_model,
-                                            measurement_model=UKF.measurement_model,
-                                            state=self.state,
-                                            state_cov=self.state_cov,
-                                            process_noise=process_noise,
-                                            measurement_noise=self.measurement_noise)
-        self.state, self.state_cov = kf_correct(measurement,
-                                                x=x,
-                                                y_predicted=y,
-                                                cov_x=cov_x,
-                                                cov_y=cov_y,
-                                                gain=gain)
-        error = measurement - y
-        return x, torch.sum(error ** 2, dim=1)
+        Args:
+            xs: sigma points as (b, m, n) tensors
+
+        Returns:
+            Predicted measurements
+        """
+        return xs[:, 0:2]
+
+
+class SimpleUKFRNN(ukf.KFRNN):
+    def __init__(self, *args, **kwargs):
+        super(SimpleUKFRNN, self).__init__(cell=SimpleUKFCell(*args, **kwargs))

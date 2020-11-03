@@ -1,161 +1,184 @@
-import numpy as np
+from typing import Tuple
+
 import torch
+import torch.nn as nn
 
 
-def get_sigma_points(mu, cov, *, kappa=None):
-    """
-    Calculates sigma points
+class UKFCell(nn.Module):
+    def __init__(self, batch_size: int, state_size: int, measurement_size: int):
+        """
+        Args:
+            batch_size: number of batches
+            state_size: dimension of state
+            measurement_size: dimension of measurements
+        """
+        super(UKFCell, self).__init__()
+        self.batch_size = batch_size
+        self.state_size = state_size
+        self.measurement_size = measurement_size
 
-    Sigma points are estimated according to:
-     - x[:, 0] = mu
-     - x[:, i] = mu + sqrt(n + kappa) * col_i(L), i = 1,...,n
-     - x[:, i+n] = mu - sqrt(n + kappa) * col_i(L), i = 1,...,n
-    with cov = L @ L^T
+        b, n, m = batch_size, state_size, measurement_size
+        self.process_noise = nn.Parameter(torch.zeros((b, ((n + 1) * n) // 2)),
+                                          requires_grad=True)
+        self.measurement_noise = nn.Parameter(torch.zeros((b, ((m + 1) * m) // 2)),
+                                              requires_grad=True)
 
-    Args:
-        mu: batched mean values
-        cov: batched covariance matrices
-        kappa: kappa as used above (default value: 3 - n)
+    def motion_model(self, state: torch.Tensor) -> torch.Tensor:
+        return state
 
-    Returns:
-        Sigma points as batched (n, 2 * n + 1) matrix
-    """
+    def measurement_model(self, state: torch.Tensor) -> torch.Tensor:
+        return state
 
-    b, n = mu.shape
+    def tril_square(self, x: torch.Tensor, n: int) -> torch.Tensor:
+        """
+        Batched squares of triangular matrices
 
-    if kappa is None:
-        kappa = 3. - n
+        The square of the (triangular) matrix L is defined as L @ L.T. The ordering of the elements
+        in x has to obey those of `torch.tril_indices`.
 
-    cols = torch.cholesky(cov)
-    w = np.sqrt(n + kappa)
+        Args:
+            x: batched n * (n + 1) / 2 elements of the batched (n, n) triangular matrices L
+            n: n
 
-    dx = torch.zeros(b, n, 2 * n + 1)
-    dx[:, :, 1:n + 1] = cols * w
-    dx[:, :, n + 1:] = -cols * w
+        Returns:
+            Batched product L @ L.T
+        """
+        idx = torch.tril_indices(n, n)
+        y = torch.zeros((self.batch_size, n, n))
+        y[:, idx[0], idx[1]] = x
+        return torch.matmul(y, y.transpose(1, 2))
 
-    return mu.unsqueeze(2) + dx
+    def get_sigma_points(self,
+                         mu: torch.Tensor,
+                         cov: torch.Tensor,
+                         *,
+                         kappa: float) -> torch.Tensor:
+        """
+        Calculates sigma points
 
+        Sigma points are estimated according to:
+         - x[:, 0] = mu
+         - x[:, i] = mu + sqrt(n + kappa) * col_i(L), i = 1,...,n
+         - x[:, i+n] = mu - sqrt(n + kappa) * col_i(L), i = 1,...,n
+        with cov = L @ L^T
 
-def get_weights(*, n, kappa):
-    """
-    Returns 2n+1 weights
+        Args:
+            mu: batched mean values
+            cov: batched covariance matrices
+            kappa: kappa as used above
 
-    If used in unscented transforms the value of kappa should be the same as used for estimating the
-    sigma points.
-    Weights are estimated according to:
-     - w[0] = kappa / (n + kappa)
-     - w[i] = .5 / (n + kappa), i = 1,...,2n+1
+        Returns:
+            Sigma points as batched (n, 2 * n + 1) matrix
+        """
 
-    Args:
-        n: n as used above
-        kappa: kappa as used above
+        b, n = mu.shape
 
-    Returns:
-        2n+1 weights
+        cols = torch.cholesky(cov)
+        w = torch.sqrt(torch.tensor(n + kappa))
 
-    """
-    w = torch.ones(2 * n + 1) / 2. / (n + kappa)
-    w[0] *= 2. * kappa
-    return w
+        dx = torch.zeros(b, n, 2 * n + 1)
+        dx[:, :, 1:n + 1] = cols * w
+        dx[:, :, n + 1:] = -cols * w
 
+        return mu.unsqueeze(2) + dx
 
-def ukf_step(*, motion_model, measurement_model, state, state_cov, process_noise, measurement_noise,
-             kappa=None):
-    """
-    UKF step
+    def get_weights(self, *, n: int, kappa: float) -> torch.Tensor:
+        """
+        Returns 2n+1 weights
 
-    State and state covariance are propagated according to a motion and measurement model.
-    The returned values can be used together with an actual measurement to compute the corrected
-    mean and covariance (cf. kf_correct).
+        If used in unscented transforms the value of kappa should be the same as used for estimating the
+        sigma points.
+        Weights are estimated according to:
+         - w[0] = kappa / (n + kappa)
+         - w[i] = .5 / (n + kappa), i = 1,...,2n+1
 
-    Args:
-        motion_model: function that propagates (b, n, 2 * n + 1) data according to motion model
-        measurement_model: function that predicts (b, m) measurements from (b, n, 2 * n + 1) data
-        state: state of type (b, n) tensor
-        state_cov: state covariance of type (b, n, n) tensor
-        process_noise: process noise of type (b, n, n) tensor
-        measurement_noise: measurement noise of type (b, m, m) tensor
-        kappa: kappa as used in get_weights and get_sigma_points (default value: 3 - n)
+        Args:
+            n: n as used above
+            kappa: kappa as used above
 
-    Returns:
-        x: predicted mean of state
-        y: estimated mean of predicted measurements
-        cov_x: predicted state covariance
-        cov_y: estimated covariance of predicted measurements
-        gain: Kalman gain
+        Returns:
+            2n+1 weights
 
-    Notes:
-        Below listed are the shapes of the used tensors where (b, n, m) refer to the batch size,
-        the state dimension, and the dimensionality of the measured features, respectively:
-         -            w: (1, 1, 2 * n + 1)
-         - sigma_points: (b, n, 2 * n + 1)
-         -           xs: (b, n, 2 * n + 1)
-         -            x: (b, n)
-         -        res_x: (b, n, 2 * n + 1)
-         -        cov_x: (b, n, n)
-         -           ys: (b, m, 2 * n + 1)
-         -            y: (b, m)
-         -        res_y: (b, m, 2 * n + 1)
-         -        cov_y: (b, m, m)
-         -        res_s: (b, n, 2 * n + 1)
-         -       cov_sy: (b, n, m)
-         -         gain: (b, n, m)
-    """
-    b, n = state.shape
-    if kappa is None:
-        kappa = 3. - n
+        """
+        w = torch.ones(2 * n + 1) / 2. / (n + kappa)
+        w[0] *= 2. * kappa
+        return w
 
-    w = get_weights(n=n, kappa=kappa).unsqueeze(0).unsqueeze(1)
+    def forward(self,
+                measurement: torch.Tensor,
+                state: torch.Tensor,
+                state_cov: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        UKF step
 
-    # compute sigma points
-    sigma_points = get_sigma_points(state, state_cov, kappa=kappa)
+        State and state covariance are propagated according to a motion and measurement model, new
+        measurement values are predicted, compared with actual measurements, and eventually used to
+        update the state and the state covariance.
 
-    # propagate sigma points
-    xs = motion_model(sigma_points)
+        Args:
+            measurement: batch of new measurements as (b, m) tensor
+            state: batch of current state as (b, n) tensor
+            state_cov: batch of current state covariances as (b, n, n) tensor
 
-    # compute predicted mean and covariance
-    x = torch.sum(w * xs, dim=2)
-    res_x = xs - x.unsqueeze(2)
-    cov_x = torch.matmul(w * res_x, res_x.transpose(1, 2)) + process_noise
+        Returns:
+            Batched predicted measurements, updated states, and updated state covariances
 
-    # update sigma points
-    sigma_points = get_sigma_points(x, cov_x, kappa=kappa)
+        Notes:
+            Below listed are the shapes of the used tensors where (b, n, m) refer to the batch size,
+            the state dimension, and the dimensionality of the measured features, respectively:
+             -  measurement: (b, m)
+             -        state: (b, n)
+             -    state_cov: (b, n, n)
+             -            w: (1, 1, 2 * n + 1)
+             - sigma_points: (b, n, 2 * n + 1)
+             -           xs: (b, n, 2 * n + 1)
+             -            x: (b, n)
+             -        x_res: (b, n, 2 * n + 1)
+             -        x_cov: (b, n, n)
+             -           ys: (b, m, 2 * n + 1)
+             -            y: (b, m)
+             -        y_res: (b, m, 2 * n + 1)
+             -        y_cov: (b, m, m)
+             -        s_res: (b, n, 2 * n + 1)
+             -       cov_sy: (b, n, m)
+             -         gain: (b, n, m)
+        """
+        process_noise_cov = self.tril_square(self.process_noise, self.state_size)
+        measurement_noise_cov = self.tril_square(self.measurement_noise, self.measurement_size)
 
-    # predict measurements
-    ys = measurement_model(sigma_points)
+        kappa = 3. - self.state_size
 
-    # estimate mean and covariance of predicted measurements
-    y = torch.sum(w * ys, dim=2)
-    res_y = ys - y.unsqueeze(2)
-    cov_y = torch.matmul(w * res_y, res_y.transpose(1, 2)) + measurement_noise
+        w = self.get_weights(n=self.state_size, kappa=kappa).unsqueeze(0).unsqueeze(1)
 
-    # compute cross-covariance and Kalman gain
-    res_s = sigma_points - x.unsqueeze(2)
-    cov_sy = torch.matmul(w * res_s, res_y.transpose(1, 2))
-    gain = torch.matmul(cov_sy, cov_y.inverse())
+        # compute sigma points
+        sigma_points = self.get_sigma_points(state, state_cov, kappa=kappa)
 
-    return x, y, cov_x, cov_y, gain
+        # propagate sigma points
+        xs = self.motion_model(sigma_points)
 
+        # compute predicted mean and covariance
+        x = torch.sum(w * xs, dim=2)
+        x_res = xs - x.unsqueeze(2)
+        x_cov = torch.matmul(w * x_res, x_res.transpose(1, 2)) + process_noise_cov
 
-def kf_correct(y_measured, *, x, y_predicted, cov_x, cov_y, gain):
-    """
-    KF correction step
+        # update sigma points
+        sigma_points = self.get_sigma_points(x, x_cov, kappa=kappa)
 
-    Applies KF correction step to batched n-dimensional state and state covariance, given a new
-    (batched) m-dimensional measurement.
+        # predict measurements
+        ys = self.measurement_model(sigma_points)
 
-    Args:
-        y_measured: new measurement as (b, m) tensor
-        x: predicted mean of state as (b, n) tensor
-        y_predicted: estimated mean of predicted measurements as (b, m) tensor
-        cov_x: predicted state covariance as (b, n, n) tensor
-        cov_y: estimated covariance of predicted measurements as (b, m, m) tensor
-        gain: Kalman gain as (b, n, m) tensor
+        # estimate mean and covariance of predicted measurements
+        y = torch.sum(w * ys, dim=2)
+        y_res = ys - y.unsqueeze(2)
+        y_cov = torch.matmul(w * y_res, y_res.transpose(1, 2)) + measurement_noise_cov
 
-    Returns:
-        Corrected mean and covariance
+        # compute cross-covariance and Kalman gain
+        s_res = sigma_points - x.unsqueeze(2)
+        cov_sy = torch.matmul(w * s_res, y_res.transpose(1, 2))
+        gain = torch.matmul(cov_sy, y_cov.inverse())
 
-    """
-    x_new = x + torch.matmul(gain, (y_measured - y_predicted).unsqueeze(2)).squeeze(2)
-    cov_x_new = cov_x - torch.matmul(gain, torch.matmul(cov_y, gain.transpose(1, 2)))
-    return x_new, cov_x_new
+        # correct state and state covariance
+        new_state = x + torch.matmul(gain, (measurement - y).unsqueeze(2)).squeeze(2)
+        new_state_cov = x_cov - torch.matmul(gain, torch.matmul(y_cov, gain.transpose(1, 2)))
+
+        return y, new_state, new_state_cov
