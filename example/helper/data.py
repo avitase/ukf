@@ -34,7 +34,8 @@ def generate_data(*, phi, v0, noise, n, n_repeat):
             vs[:, :, begin:end] = v
             v = torch.matmul(rot, v)
 
-    gt = torch.cumsum(vs, axis=2)
+    gt = torch.zeros((b, 2, n * n_repeat))
+    gt[:, :, 1:] = torch.cumsum(vs[:, :, :-1], axis=2)
     x = torch.normal(gt, noise.unsqueeze(2).expand_as(gt))
 
     return x, gt
