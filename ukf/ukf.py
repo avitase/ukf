@@ -31,7 +31,7 @@ class UKFCell(nn.Module):
         has dimensionality m (typically: n = 2 * m + 1).
 
         Args:
-            states: sigma points as (b, m, n) tensors
+            state: sigma points as (b, m, n) tensors
 
         Returns:
             Advanced states
@@ -46,7 +46,7 @@ class UKFCell(nn.Module):
         has dimensionality m (typically: n = 2 * m + 1).
 
         Args:
-            states: sigma points as (b, m, n) tensors
+            state: sigma points as (b, m, n) tensors
 
         Returns:
             Predicted measurements
@@ -110,8 +110,8 @@ class UKFCell(nn.Module):
         """
         Returns 2n+1 weights
 
-        If used in unscented transforms the value of kappa should be the same as used for estimating the
-        sigma points.
+        If used in unscented transforms the value of kappa should be the same as used for estimating
+        the sigma points.
         Weights are estimated according to:
          - w[0] = kappa / (n + kappa)
          - w[i] = .5 / (n + kappa), i = 1,...,2n+1
