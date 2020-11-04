@@ -24,9 +24,33 @@ class UKFCell(nn.Module):
                                               requires_grad=True)
 
     def motion_model(self, state: torch.Tensor) -> torch.Tensor:
+        """
+        Applies motion model to batches of sigma points
+
+        Applies motion model to b batches of n sigma points, where each sigma point (state)
+        has dimensionality m (typically: n = 2 * m + 1).
+
+        Args:
+            states: sigma points as (b, m, n) tensors
+
+        Returns:
+            Advanced states
+        """
         return state
 
     def measurement_model(self, state: torch.Tensor) -> torch.Tensor:
+        """
+        Applies measurement model to batches of sigma points
+
+        Predict measurements from b batches of n sigma points, where each sigma point (state)
+        has dimensionality m (typically: n = 2 * m + 1).
+
+        Args:
+            states: sigma points as (b, m, n) tensors
+
+        Returns:
+            Predicted measurements
+        """
         return state
 
     def tril_square(self, x: torch.Tensor, n: int) -> torch.Tensor:
