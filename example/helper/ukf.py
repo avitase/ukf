@@ -1,13 +1,11 @@
-import numpy as np
 import torch
 
 import ukf
 
 
 class SimpleUKFCell(ukf.UKFCell):
-    def __init__(self, *, batch_size: int, v: torch.Tensor):
-        super(SimpleUKFCell, self).__init__(batch_size=batch_size, state_size=3, measurement_size=2)
-        self.v = v
+    def __init__(self, *, batch_size: int):
+        super(SimpleUKFCell, self).__init__(batch_size=batch_size, state_size=4, measurement_size=2)
 
     def motion_model(self, states: torch.Tensor) -> torch.Tensor:
         """
@@ -24,24 +22,14 @@ class SimpleUKFCell(ukf.UKFCell):
         """
         x = states[:, 0]
         y = states[:, 1]
-        phi = states[:, 2]
-        v = self.v.unsqueeze(1)
-
-        # apply same correction to all sigma points
-        phi_mean = phi[:, 0]
-        phi[phi_mean > np.pi] -= 2. * np.pi
-        phi[phi_mean < -np.pi] += 2. * np.pi
-
-        cos_phi = torch.cos(phi)
-        sin_phi = torch.sin(phi)
-
-        vx = v * cos_phi
-        vy = v * sin_phi
+        vx = states[:, 2]
+        vy = states[:, 3]
 
         update = torch.empty_like(states)
         update[:, 0] = x + vx
         update[:, 1] = y + vy
-        update[:, 2] = phi
+        update[:, 2] = vx
+        update[:, 3] = vy
 
         return update
 
