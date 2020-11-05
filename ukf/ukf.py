@@ -53,7 +53,8 @@ class UKFCell(nn.Module):
         """
         return state
 
-    def tril_square(self, x: torch.Tensor, n: int) -> torch.Tensor:
+    @staticmethod
+    def tril_square(x: torch.Tensor, n: int) -> torch.Tensor:
         """
         Batched squares of triangular matrices
 
@@ -67,8 +68,9 @@ class UKFCell(nn.Module):
         Returns:
             Batched product L @ L.T
         """
+        b, _ = x.shape
         idx = torch.tril_indices(n, n)
-        y = torch.zeros((self.batch_size, n, n))
+        y = torch.zeros((b, n, n))
         y[:, idx[0], idx[1]] = x
         return torch.matmul(y, y.transpose(1, 2))
 
@@ -171,7 +173,6 @@ class UKFCell(nn.Module):
         measurement_noise_cov = self.tril_square(self.measurement_noise, self.measurement_size)
 
         kappa = 3. - self.state_size
-
         w = self.get_weights(n=self.state_size, kappa=kappa).unsqueeze(0).unsqueeze(1)
 
         # compute sigma points
