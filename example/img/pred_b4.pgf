@@ -117,7 +117,7 @@
 \pgfsys@useobject{currentmarker}{}%
 \end{pgfscope}%
 \begin{pgfscope}%
-\pgfsys@transformshift{0.929644in}{1.143363in}%
+\pgfsys@transformshift{0.929644in}{1.143362in}%
 \pgfsys@useobject{currentmarker}{}%
 \end{pgfscope}%
 \begin{pgfscope}%
@@ -145,7 +145,7 @@
 \pgfsys@useobject{currentmarker}{}%
 \end{pgfscope}%
 \begin{pgfscope}%
-\pgfsys@transformshift{1.731474in}{1.226429in}%
+\pgfsys@transformshift{1.731474in}{1.226428in}%
 \pgfsys@useobject{currentmarker}{}%
 \end{pgfscope}%
 \begin{pgfscope}%
@@ -169,7 +169,7 @@
 \pgfsys@useobject{currentmarker}{}%
 \end{pgfscope}%
 \begin{pgfscope}%
-\pgfsys@transformshift{2.693670in}{1.724822in}%
+\pgfsys@transformshift{2.693671in}{1.724822in}%
 \pgfsys@useobject{currentmarker}{}%
 \end{pgfscope}%
 \begin{pgfscope}%
@@ -486,8 +486,8 @@
 \definecolor{currentstroke}{rgb}{0.690196,0.690196,0.690196}%
 \pgfsetstrokecolor{currentstroke}%
 \pgfsetdash{}{0pt}%
-\pgfpathmoveto{\pgfqpoint{0.673056in}{1.641756in}}%
-\pgfpathlineto{\pgfqpoint{2.789890in}{1.641756in}}%
+\pgfpathmoveto{\pgfqpoint{0.673056in}{1.641755in}}%
+\pgfpathlineto{\pgfqpoint{2.789890in}{1.641755in}}%
 \pgfusepath{stroke}%
 \end{pgfscope}%
 \begin{pgfscope}%
@@ -505,7 +505,7 @@
 \pgfusepath{stroke,fill}%
 }%
 \begin{pgfscope}%
-\pgfsys@transformshift{0.673056in}{1.641756in}%
+\pgfsys@transformshift{0.673056in}{1.641755in}%
 \pgfsys@useobject{currentmarker}{}%
 \end{pgfscope}%
 \end{pgfscope}%
@@ -615,7 +615,7 @@
 \pgfpathlineto{\pgfqpoint{0.929643in}{1.475624in}}%
 \pgfpathlineto{\pgfqpoint{0.929643in}{1.309493in}}%
 \pgfpathlineto{\pgfqpoint{0.929644in}{1.143362in}}%
-\pgfpathlineto{\pgfqpoint{0.929644in}{0.977232in}}%
+\pgfpathlineto{\pgfqpoint{0.929644in}{0.977231in}}%
 \pgfpathlineto{\pgfqpoint{0.929644in}{0.811101in}}%
 \pgfpathlineto{\pgfqpoint{1.090010in}{0.894166in}}%
 \pgfpathlineto{\pgfqpoint{1.250376in}{0.977232in}}%
@@ -624,7 +624,7 @@
 \pgfpathlineto{\pgfqpoint{1.731474in}{1.226429in}}%
 \pgfpathlineto{\pgfqpoint{1.891840in}{1.309494in}}%
 \pgfpathlineto{\pgfqpoint{2.052206in}{1.392560in}}%
-\pgfpathlineto{\pgfqpoint{2.212572in}{1.475626in}}%
+\pgfpathlineto{\pgfqpoint{2.212572in}{1.475625in}}%
 \pgfpathlineto{\pgfqpoint{2.372938in}{1.558691in}}%
 \pgfpathlineto{\pgfqpoint{2.533304in}{1.641757in}}%
 \pgfpathlineto{\pgfqpoint{2.372938in}{1.724822in}}%
