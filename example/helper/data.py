@@ -36,7 +36,7 @@ class DataLoader:
                 v = torch.matmul(rot, v)
 
         self._gt = torch.zeros((b, 2, n * n_repeat))
-        self._gt[:, :, 1:] = torch.cumsum(vs[:, :, :-1], axis=2)
+        self._gt[:, :, 1:] = torch.cumsum(vs[:, :, :-1], dim=2)
 
         if noise:
             self._x = torch.normal(self._gt, noise.unsqueeze(2).expand_as(self._gt))
