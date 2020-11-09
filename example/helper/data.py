@@ -58,3 +58,21 @@ class DataLoader:
             idxs = idxs[torch.randperm(n_windows)]
 
         return self._x[:, :, idxs], self._gt[:, :, idxs]
+
+
+def init_state(x):
+    b, _, n = x.shape
+    assert n >= 2
+
+    x1, x2 = x[:, 0, 0], x[:, 0, 1]
+    y1, y2 = x[:, 1, 0], x[:, 1, 1]
+    dx = x2 - x1
+    dy = y2 - y1
+
+    state = torch.zeros(b, 4)
+    state[:, 0] = x1 - dx  # x
+    state[:, 1] = y1 - dy  # y
+    state[:, 2] = dx  # vx
+    state[:, 3] = dy  # vy
+
+    return state
