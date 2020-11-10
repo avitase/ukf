@@ -105,8 +105,8 @@ def init_ukf(*, batch_size, debug=True):
          (2) off-diagonal elements: zero
 
         Index mapping of 2x2 triangular matrix:
-        [0 1 2 3] -> [[0 -],
-                      [1 2]]
+        [0 1 2] -> [[0 -],
+                    [1 2]]
         """
         avg = torch.sum(grad[:, (0, 2)], dim=1) / 2.
 
