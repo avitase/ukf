@@ -53,8 +53,24 @@ class SimpleUKFRNN(ukf.KFRNN):
     def __init__(self, *args, **kwargs):
         super(SimpleUKFRNN, self).__init__(cell=SimpleUKFCell(*args, **kwargs))
 
+    @property
+    def process_noise(self):
+        return self.cell.process_noise.data
 
-def init_ukf(*, batch_size, process_noise, measurement_noise, debug=True):
+    @process_noise.setter
+    def process_noise(self, data):
+        self.cell.process_noise.data = data
+
+    @property
+    def measurement_noise(self):
+        return self.cell.measurement_noise.data
+
+    @measurement_noise.setter
+    def measurement_noise(self, data):
+        self.cell.measurement_noise.data = data
+
+
+def init_ukf(*, batch_size, debug=True):
     def _constrain_process_noise(grad):
         """
         Constrain process noise
@@ -109,9 +125,6 @@ def init_ukf(*, batch_size, process_noise, measurement_noise, debug=True):
             return new_grad
 
     rnn = SimpleUKFRNN(batch_size=batch_size)
-
-    rnn.cell.process_noise.data = process_noise
-    rnn.cell.measurement_noise.data = measurement_noise
 
     rnn.cell.process_noise.register_hook(_reinit_nans)
     rnn.cell.process_noise.register_hook(_constrain_process_noise)
