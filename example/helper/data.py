@@ -4,6 +4,16 @@ import torch
 
 class DataLoader:
     def __init__(self, *, phi, v0, n, n_repeat, noise=None):
+        """
+        Generate random data in batches
+
+        Args:
+            phi: batched initial rotation in rad
+            v0: batched initial velocity
+            n: number of data samples per period
+            n_repeat: number of periods
+            noise: measurement noise (pass None to disable noise)
+        """
         tau = n // 3
 
         def _rot(x):
@@ -44,6 +54,16 @@ class DataLoader:
             self._x = self._gt
 
     def __call__(self, *, window_size=None, randomize=False):
+        """
+        Return random data in batches
+
+        Args:
+            window_size: size of windows (pass None to disable division windowing)
+            randomize: randomize ordering of windows
+
+        Returns:
+            Batched data
+        """
         if window_size is None:
             return self._x, self._gt
 
@@ -61,6 +81,18 @@ class DataLoader:
 
 
 def init_state(x):
+    """
+    Initialize states
+
+    The first two measurements (i.e., n = {0,1}) are extracted to estimate the initial position and
+    velocity. The batched 4d-measurements have to be arranged in (b, 4, n) tensors.
+
+    Args:
+        x: batched measurements as (b, 4, n) tensor
+
+    Returns:
+        Batched states as (b, 4) tensor
+    """
     b, _, n = x.shape
     assert n >= 2
 

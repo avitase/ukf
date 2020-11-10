@@ -14,7 +14,7 @@ class KFRNN(nn.Module):
                 state: torch.Tensor,
                 state_cov: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
-        Applies forward method of cell to passed measurements successively
+        Apply forward method of cell to passed measurements successively
 
         Args:
             measurements: batched measurements as (b, m, s) tensor
