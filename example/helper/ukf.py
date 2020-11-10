@@ -9,7 +9,7 @@ class SimpleUKFCell(ukf.UKFCell):
 
     def motion_model(self, states: torch.Tensor) -> torch.Tensor:
         """
-        Applies motion model to batches of sigma points
+        Apply motion model to batches of sigma points
 
         Applies motion model to b batches of n sigma points, where each sigma point (state)
         has dimensionality m (typically: n = 2 * m + 1).
@@ -35,7 +35,7 @@ class SimpleUKFCell(ukf.UKFCell):
 
     def measurement_model(self, xs: torch.Tensor) -> torch.Tensor:
         """
-        Applies measurement model to batches of sigma points
+        Apply measurement model to batches of sigma points
 
         Applies measurement model to b batches of n sigma points, where each sigma point (state)
         has dimensionality m (typically: n = 2 * m + 1).
