@@ -5,17 +5,26 @@ import torch.nn as nn
 
 
 class UKFCell(nn.Module):
-    def __init__(self, batch_size: int, state_size: int, measurement_size: int):
+    def __init__(self,
+                 batch_size: int,
+                 state_size: int,
+                 measurement_size: int,
+                 log_cholesky: bool = True):
         """
         Args:
             batch_size: number of batches
             state_size: dimension of state
             measurement_size: dimension of measurements
+            log_cholesky: do Log-Cholesky decomposition instead of normal Cholesky decomposition
+
+        Notes:
+            Log-Cholesky decomposition is described in doi.org/10.1007/BF00140873
         """
         super(UKFCell, self).__init__()
         self.batch_size = batch_size
         self.state_size = state_size
         self.measurement_size = measurement_size
+        self.log_cholesky = log_cholesky
 
         b, n, m = batch_size, state_size, measurement_size
         self.process_noise = nn.Parameter(torch.zeros((b, ((n + 1) * n) // 2)),
@@ -53,8 +62,37 @@ class UKFCell(nn.Module):
         """
         return state
 
-    @staticmethod
-    def tril_square(x: torch.Tensor, n: int) -> torch.Tensor:
+    def exp_diag(self, x: torch.Tensor, n: int) -> torch.Tensor:
+        """
+        Transforms diagonal of batched linearized triangular matricies with `torch.exp`
+
+        The sequence [a, b, c, d, e, f, g, h, i, j, ...] is transformed into
+        [exp(a), b, exp(c), d, e, exp(f), g, h, i, exp(j), ...]. If [a, b, c, ...] is the
+        parametrization of a triangular matrix, e.g.,
+         [[a, 0, 0, ...],
+          [b, c, 0, ...],
+          [d, e, f, ...]]
+        then the exp transformation is only applied to the diagonal elements.
+
+        Note that n is not the number of elements in x but the number of elements in the
+        corresponding triangular matrix, i.e., len(x) = n * (n + 1) / 2.
+
+        Args:
+            x: linearized triangular matrix (e.g., via `torch.tril_indices`)
+            n: size of corresponding triangular matrix
+
+        Returns:
+            Transformed batched matricies
+        """
+        i = torch.arange(n, dtype=torch.long)  # 0, 1, 2, 3, ...
+        j = (i * (i + 3)) // 2  # 0, 2, 5, 9, ...
+
+        mask = torch.zeros_like(x)
+        mask[:, j] = 1.
+
+        return (1. - mask) * x + mask * torch.exp(x)
+
+    def tril_square(self, x: torch.Tensor, n: int, exp_diag: bool = False) -> torch.Tensor:
         """
         Batched squares of triangular matrices
 
@@ -64,6 +102,7 @@ class UKFCell(nn.Module):
         Args:
             x: batched n * (n + 1) / 2 elements of the batched (n, n) triangular matrices L
             n: n
+            exp_diag: transform diagonal element with `torch.exp`
 
         Returns:
             Batched product L @ L.T
@@ -71,7 +110,7 @@ class UKFCell(nn.Module):
         b, _ = x.shape
         idx = torch.tril_indices(n, n)
         y = torch.zeros((b, n, n))
-        y[:, idx[0], idx[1]] = x
+        y[:, idx[0], idx[1]] = self.exp_diag(x, n) if exp_diag else x
         return torch.matmul(y, y.transpose(1, 2))
 
     def get_sigma_points(self,
@@ -169,8 +208,8 @@ class UKFCell(nn.Module):
              -       cov_sy: (b, n, m)
              -         gain: (b, n, m)
         """
-        process_noise_cov = self.tril_square(self.process_noise, self.state_size)
-        measurement_noise_cov = self.tril_square(self.measurement_noise, self.measurement_size)
+        process_noise_cov = self.process_noise_cov()
+        measurement_noise_cov = self.measurement_noise_cov()
 
         kappa = 3. - self.state_size
         w = self.get_weights(n=self.state_size, kappa=kappa).unsqueeze(0).unsqueeze(1)
@@ -207,3 +246,13 @@ class UKFCell(nn.Module):
         new_state_cov = x_cov - torch.matmul(gain, torch.matmul(y_cov, gain.transpose(1, 2)))
 
         return y, new_state, new_state_cov
+
+    def process_noise_cov(self) -> torch.Tensor:
+        return self.tril_square(self.process_noise,
+                                self.state_size,
+                                exp_diag=self.log_cholesky)
+
+    def measurement_noise_cov(self) -> torch.Tensor:
+        return self.tril_square(self.measurement_noise,
+                                self.measurement_size,
+                                exp_diag=self.log_cholesky)

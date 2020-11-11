@@ -4,8 +4,11 @@ import ukf
 
 
 class SimpleUKFCell(ukf.UKFCell):
-    def __init__(self, *, batch_size: int):
-        super(SimpleUKFCell, self).__init__(batch_size=batch_size, state_size=4, measurement_size=2)
+    def __init__(self, *, batch_size: int, log_cholesky: bool):
+        super(SimpleUKFCell, self).__init__(batch_size=batch_size,
+                                            state_size=4,
+                                            measurement_size=2,
+                                            log_cholesky=log_cholesky)
 
     def motion_model(self, states: torch.Tensor) -> torch.Tensor:
         """
@@ -54,23 +57,29 @@ class SimpleUKFRNN(ukf.KFRNN):
         super(SimpleUKFRNN, self).__init__(cell=SimpleUKFCell(*args, **kwargs))
 
     @property
-    def process_noise(self):
+    def process_noise(self) -> torch.tensor:
         return self.cell.process_noise.data
 
     @process_noise.setter
-    def process_noise(self, data):
+    def process_noise(self, data: torch.Tensor) -> None:
         self.cell.process_noise.data = data
 
+    def process_noise_cov(self) -> torch.Tensor:
+        return self.cell.process_noise_cov()
+
     @property
-    def measurement_noise(self):
+    def measurement_noise(self) -> torch.Tensor:
         return self.cell.measurement_noise.data
 
     @measurement_noise.setter
-    def measurement_noise(self, data):
+    def measurement_noise(self, data: torch.Tensor) -> None:
         self.cell.measurement_noise.data = data
 
+    def measurement_noise_cov(self) -> torch.Tensor:
+        return self.cell.measurement_noise_cov()
 
-def init_ukf(*, batch_size, debug=True):
+
+def init_ukf(*, batch_size: int, debug: bool = True) -> torch.Tensor:
     def _constrain_process_noise(grad):
         """
         Constrain process noise
@@ -124,7 +133,7 @@ def init_ukf(*, batch_size, debug=True):
             print('Warning! Found {torch.sum(sel)} NaN values in gradient')
             return new_grad
 
-    rnn = SimpleUKFRNN(batch_size=batch_size)
+    rnn = SimpleUKFRNN(batch_size=batch_size, log_cholesky=True)
 
     rnn.cell.process_noise.register_hook(_reinit_nans)
     rnn.cell.process_noise.register_hook(_constrain_process_noise)
