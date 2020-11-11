@@ -12,7 +12,7 @@ class DataLoader:
             v0: batched initial velocity
             n: number of data samples per period
             n_repeat: number of periods
-            noise: measurement noise (pass None to disable noise)
+            noise: batched 2d-measurement noise (pass None to disable noise)
         """
         tau = n // 3
 
