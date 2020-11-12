@@ -62,6 +62,19 @@ class UKFCell(nn.Module):
         """
         return state
 
+    def error(self, measurement: torch.Tensor, prediction: torch.Tensor) -> torch.Tensor:
+        """
+        Error of prediction w.r.t. measurement
+
+        Args:
+            measurement: batched measurements
+            prediction: batched predictions
+
+        Returns:
+            Batched error of prediction w.r.t. measurement
+        """
+        return prediction - measurement
+
     def exp_diag(self, x: torch.Tensor, n: int) -> torch.Tensor:
         """
         Transforms diagonal of batched linearized triangular matricies with `torch.exp`
@@ -242,7 +255,7 @@ class UKFCell(nn.Module):
         gain = torch.matmul(cov_sy, y_cov.inverse())
 
         # correct state and state covariance
-        new_state = x + torch.matmul(gain, (measurement - y).unsqueeze(2)).squeeze(2)
+        new_state = x + torch.matmul(gain, -self.error(measurement, y).unsqueeze(2)).squeeze(2)
         new_state_cov = x_cov - torch.matmul(gain, torch.matmul(y_cov, gain.transpose(1, 2)))
 
         return y, new_state, new_state_cov
