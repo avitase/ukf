@@ -13,7 +13,9 @@ class MyCell(nn.Module):
     def forward(self,
                 x: torch.Tensor,
                 state: torch.Tensor,
-                state_cov: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+                state_cov: torch.Tensor,
+                ctrl: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        assert ctrl.item() == 42
         return x * 2, state * 2, state_cov * 2
 
 
@@ -26,7 +28,8 @@ def test_kfrnn():
     init_state = torch.randint(high=10, size=(2, 4))
     init_state_cov = torch.randint(high=10, size=(2, 4, 4))
 
-    preds, states, state_covs = cell(x, init_state, init_state_cov)
+    ctrl = torch.tensor(42, dtype=torch.int)
+    preds, states, state_covs = cell(x, init_state, init_state_cov, ctrl)
     assert preds.shape == (2, 3, 6)
     assert states.shape == (2, 4, 6)
     assert state_covs.shape == (2, 4, 4, 6)

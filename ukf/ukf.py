@@ -32,7 +32,7 @@ class UKFCell(nn.Module):
         self.measurement_noise = nn.Parameter(torch.zeros((b, ((m + 1) * m) // 2)),
                                               requires_grad=True)
 
-    def motion_model(self, state: torch.Tensor) -> torch.Tensor:
+    def motion_model(self, state: torch.Tensor, ctrl: torch.Tensor) -> torch.Tensor:
         """
         Applies motion model to batches of sigma points
 
@@ -41,6 +41,7 @@ class UKFCell(nn.Module):
 
         Args:
             state: sigma points as (b, m, n) tensors
+            ctrl: control-input
 
         Returns:
             Advanced states
@@ -185,7 +186,8 @@ class UKFCell(nn.Module):
     def forward(self,
                 measurement: torch.Tensor,
                 state: torch.Tensor,
-                state_cov: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+                state_cov: torch.Tensor,
+                ctrl: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         UKF step
 
@@ -197,6 +199,7 @@ class UKFCell(nn.Module):
             measurement: batch of new measurements as (b, m) tensor
             state: batch of current state as (b, n) tensor
             state_cov: batch of current state covariances as (b, n, n) tensor
+            ctrl: control-input for motion model
 
         Returns:
             Batched predicted measurements, updated states, and updated state covariances
@@ -231,7 +234,7 @@ class UKFCell(nn.Module):
         sigma_points = self.get_sigma_points(state, state_cov, kappa=kappa)
 
         # propagate sigma points
-        xs = self.motion_model(sigma_points)
+        xs = self.motion_model(sigma_points, ctrl)
 
         # compute predicted mean and covariance
         x = torch.sum(w * xs, dim=2)

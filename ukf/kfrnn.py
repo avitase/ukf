@@ -12,7 +12,8 @@ class KFRNN(nn.Module):
     def forward(self,
                 measurements: torch.Tensor,
                 state: torch.Tensor,
-                state_cov: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+                state_cov: torch.Tensor,
+                ctrl: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Apply forward method of cell to passed measurements successively
 
@@ -20,6 +21,7 @@ class KFRNN(nn.Module):
             measurements: batched measurements as (b, m, s) tensor
             state: batched initial state as (b, n) tensor
             state_cov: batched initial state covariance as (b, n, n) tensor
+            ctrl: control-input of motion model
 
         Returns:
             Batched predictions, states and state covariances of each step
@@ -37,7 +39,7 @@ class KFRNN(nn.Module):
 
         for i in range(s):
             preds[:, :, i], states[:, :, i + 1], state_covs[:, :, :, i + 1] = self.cell.forward(
-                measurements[:, :, i], states[:, :, i], state_covs[:, :, :, i]
+                measurements[:, :, i], states[:, :, i], state_covs[:, :, :, i], ctrl,
             )
 
         return preds, states[:, :, 1:], state_covs[:, :, :, 1:]

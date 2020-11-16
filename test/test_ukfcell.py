@@ -9,7 +9,9 @@ class MyUKFCell(ukf.UKFCell):
     def __init__(self, *args, **kwargs):
         super(MyUKFCell, self).__init__(*args, **kwargs)
 
-    def motion_model(self, x):
+    def motion_model(self, x, ctrl):
+        assert ctrl.item() == 42
+
         dt = .5
         a = -2.
 
@@ -40,7 +42,8 @@ def test_ukfcell():
 
     phi = torch.tensor([[np.pi / 6., ], [np.pi / 3., ]])
     with torch.no_grad():
-        y, new_state, new_cov = cell(phi, init_state, init_state_cov)
+        ctrl = torch.tensor(42, dtype=torch.int)
+        y, new_state, new_cov = cell(phi, init_state, init_state_cov, ctrl)
 
     y_exp = torch.tensor([[.49], [.5074]])
     x_exp = torch.tensor([[2.5133, 4.0185], [4.2047, 5.3173]])
@@ -76,7 +79,8 @@ def test_ukfcell_log_cholesky():
 
     phi = torch.tensor([[np.pi / 6., ], [np.pi / 3., ]])
     with torch.no_grad():
-        y, new_state, new_cov = cell(phi, init_state, init_state_cov)
+        ctrl = torch.tensor(42, dtype=torch.int)
+        y, new_state, new_cov = cell(phi, init_state, init_state_cov, ctrl)
 
     y_exp = torch.tensor([[.49], [.5074]])
     x_exp = torch.tensor([[2.5133, 4.0185], [4.2047, 5.3173]])

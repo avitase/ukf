@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import torch
 
 import ukf
@@ -10,7 +12,7 @@ class SimpleUKFCell(ukf.UKFCell):
                                             measurement_size=2,
                                             log_cholesky=log_cholesky)
 
-    def motion_model(self, states: torch.Tensor) -> torch.Tensor:
+    def motion_model(self, states: torch.Tensor, ctrl: torch.Tensor) -> torch.Tensor:
         """
         Apply motion model to batches of sigma points
 
@@ -19,6 +21,7 @@ class SimpleUKFCell(ukf.UKFCell):
 
         Args:
             states: sigma points as (b, m, n) tensors
+            ctrl: control-input (ignored)
 
         Returns:
             Advanced states
@@ -55,6 +58,13 @@ class SimpleUKFCell(ukf.UKFCell):
 class SimpleUKFRNN(ukf.KFRNN):
     def __init__(self, *args, **kwargs):
         super(SimpleUKFRNN, self).__init__(cell=SimpleUKFCell(*args, **kwargs))
+
+    def forward(self,
+                measurements: torch.Tensor,
+                state: torch.Tensor,
+                state_cov: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        ctrl = torch.tensor(0)
+        return super(SimpleUKFRNN, self).forward(measurements, state, state_cov, ctrl)
 
     @property
     def process_noise(self) -> torch.tensor:
