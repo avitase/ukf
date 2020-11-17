@@ -224,8 +224,8 @@ class UKFCell(nn.Module):
              -       cov_sy: (b, n, m)
              -         gain: (b, n, m)
         """
-        process_noise_cov = self.process_noise_cov()
-        measurement_noise_cov = self.measurement_noise_cov()
+        process_noise_cov = self.process_noise_cov(ctrl)
+        measurement_noise_cov = self.measurement_noise_cov(ctrl)
 
         kappa = 3. - self.state_size
         w = self.get_weights(n=self.state_size, kappa=kappa).unsqueeze(0).unsqueeze(1)
@@ -263,12 +263,12 @@ class UKFCell(nn.Module):
 
         return y, new_state, new_state_cov
 
-    def process_noise_cov(self) -> torch.Tensor:
+    def process_noise_cov(self, ctrl: torch.Tensor = torch.tensor(0)) -> torch.Tensor:
         return self.tril_square(self.process_noise,
                                 self.state_size,
                                 exp_diag=self.log_cholesky)
 
-    def measurement_noise_cov(self) -> torch.Tensor:
+    def measurement_noise_cov(self, ctrl: torch.Tensor = torch.tensor(0)) -> torch.Tensor:
         return self.tril_square(self.measurement_noise,
                                 self.measurement_size,
                                 exp_diag=self.log_cholesky)
