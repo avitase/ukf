@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import torch
 import torch.optim
@@ -28,29 +30,39 @@ class MyUKFCell(ukf.UKFCell):
         return torch.atan(s / (d - x[:, 0:1, :]))
 
 
+def jit_compile(obj, debug=False):
+    if debug:
+        warnings.warn('JIT compilation is skipped!')
+        return obj
+
+    return torch.jit.script(obj)
+
+
 def test_ukfcell():
     cell = MyUKFCell(batch_size=2, state_size=2, measurement_size=1, log_cholesky=False)
-    cell.process_noise.data = torch.sqrt(torch.tensor([[.1, 0., .1], [.2, 0., 3.]]))
-    cell.measurement_noise.data = torch.sqrt(torch.tensor([[.01, ], [.04, ]]))
-    cell = torch.jit.script(cell)
+    cell.process_noise.data = torch.sqrt(
+        torch.tensor([[.1, 0., .1], [.2, 0., 3.]], dtype=torch.double))
+    cell.measurement_noise.data = torch.sqrt(
+        torch.tensor([[.01, ], [.04, ]], dtype=torch.double))
+    cell = jit_compile(cell)
 
-    init_state = torch.tensor([[0., 5.], [1., 6.]])
+    init_state = torch.tensor([[0., 5.], [1., 6.]], dtype=torch.double)
     init_state_cov = torch.tensor([
         [[.01, 0.], [0., 1.]],
         [[.09, 0.], [0., 4.]],
-    ])
+    ], dtype=torch.double)
 
-    phi = torch.tensor([[np.pi / 6., ], [np.pi / 3., ]])
+    phi = torch.tensor([[np.pi / 6., ], [np.pi / 3., ]], dtype=torch.double)
     with torch.no_grad():
         ctrl = torch.tensor(42, dtype=torch.int)
         y, new_state, new_cov = cell(phi, init_state, init_state_cov, ctrl)
 
-    y_exp = torch.tensor([[.49], [.5074]])
-    x_exp = torch.tensor([[2.5133, 4.0185], [4.2047, 5.3173]])
+    y_exp = torch.tensor([[.49], [.5074]], dtype=torch.double)
+    x_exp = torch.tensor([[2.5133, 4.0185], [4.2047, 5.3173]], dtype=torch.double)
     x_cov_exp = torch.tensor([
         [[0.3584, 0.4978], [0.4978, 1.0969]],
         [[1.2842, 1.9910], [1.9910, 6.9861]],
-    ])
+    ], dtype=torch.double)
 
     assert torch.allclose(y, y_exp, atol=1e-04)
     assert torch.allclose(new_state, x_exp, atol=1e-04)
@@ -65,29 +77,29 @@ def test_ukfcell_log_cholesky():
     cell.process_noise.data = torch.tensor([
         [_log_sqrt(.1), 0., _log_sqrt(.1)],
         [_log_sqrt(.2), 0., _log_sqrt(3.)],
-    ])
+    ], dtype=torch.double)
     cell.measurement_noise.data = torch.tensor([
         [_log_sqrt(.01), ], [_log_sqrt(.04), ],
-    ])
-    cell = torch.jit.script(cell)
+    ], dtype=torch.double)
+    cell = jit_compile(cell)
 
-    init_state = torch.tensor([[0., 5.], [1., 6.]])
+    init_state = torch.tensor([[0., 5.], [1., 6.]], dtype=torch.double)
     init_state_cov = torch.tensor([
         [[.01, 0.], [0., 1.]],
         [[.09, 0.], [0., 4.]],
-    ])
+    ], dtype=torch.double)
 
-    phi = torch.tensor([[np.pi / 6., ], [np.pi / 3., ]])
+    phi = torch.tensor([[np.pi / 6., ], [np.pi / 3., ]], dtype=torch.double)
     with torch.no_grad():
         ctrl = torch.tensor(42, dtype=torch.int)
         y, new_state, new_cov = cell(phi, init_state, init_state_cov, ctrl)
 
-    y_exp = torch.tensor([[.49], [.5074]])
-    x_exp = torch.tensor([[2.5133, 4.0185], [4.2047, 5.3173]])
+    y_exp = torch.tensor([[.49], [.5074]], dtype=torch.double)
+    x_exp = torch.tensor([[2.5133, 4.0185], [4.2047, 5.3173]], dtype=torch.double)
     x_cov_exp = torch.tensor([
         [[0.3584, 0.4978], [0.4978, 1.0969]],
         [[1.2842, 1.9910], [1.9910, 6.9861]],
-    ])
+    ], dtype=torch.double)
 
     assert torch.allclose(y, y_exp, atol=1e-04)
     assert torch.allclose(new_state, x_exp, atol=1e-04)
