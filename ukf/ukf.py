@@ -76,55 +76,63 @@ class UKFCell(nn.Module):
         """
         return prediction - measurement
 
-    def exp_diag(self, x: torch.Tensor, n: int) -> torch.Tensor:
+    def exp_diag(self, x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         """
         Transforms diagonal of batched linearized triangular matricies with `torch.exp`
 
         The sequence [a, b, c, d, e, f, g, h, i, j, ...] is transformed into
-        [exp(a), b, exp(c), d, e, exp(f), g, h, i, exp(j), ...]. If [a, b, c, ...] is the
+        [exp'(a), b, exp'(c), d, e, exp'(f), g, h, i, exp'(j), ...]. If [a, b, c, ...] is the
         parametrization of a triangular matrix, e.g.,
          [[a, 0, 0, ...],
           [b, c, 0, ...],
           [d, e, f, ...]]
-        then the exp transformation is only applied to the diagonal elements.
+        then the exp' transformation is only applied to the diagonal elements, where `exp'` is
+        `torch.exp` if the corresponding bit in `mask` is set, else it is the identity operation.
 
-        Note that n is not the number of elements in x but the number of elements in the
-        corresponding triangular matrix, i.e., len(x) = n * (n + 1) / 2.
+        Note that the size of each (batched) mask n is not the number of elements in x but the
+        number of elements in the corresponding triangular matrix, i.e., len(x) = n * (n + 1) / 2.
 
         Args:
-            x: linearized triangular matrix (e.g., via `torch.tril_indices`)
-            n: size of corresponding triangular matrix
+            x: batched linearized triangular matrix (e.g., via `torch.tril_indices`)
+            mask: batched masks
 
         Returns:
             Transformed batched matricies
         """
+        _, n = mask.shape
         i = torch.arange(n, dtype=torch.long)  # 0, 1, 2, 3, ...
         j = (i * (i + 3)) // 2  # 0, 2, 5, 9, ...
 
-        mask = torch.zeros_like(x)
-        mask[:, j] = 1.
+        m1 = torch.tensor(False).repeat(x.shape)
+        m1[:, j] = mask
 
-        return (1. - mask) * x + mask * torch.exp(x)
+        m2 = torch.zeros_like(x, dtype=x.dtype)
+        m2[:, j] = 1.
+        m2[~m1] = 0.
 
-    def tril_square(self, x: torch.Tensor, n: int, exp_diag: bool = False) -> torch.Tensor:
+        return (1. - m2) * x + m2 * torch.exp(x)
+
+    def tril_square(self, x: torch.Tensor, exp_diag_mask: torch.Tensor) -> torch.Tensor:
         """
         Batched squares of triangular matrices
 
         The square of the (triangular) matrix L is defined as L @ L.T. The ordering of the elements
-        in x has to obey those of `torch.tril_indices`.
+        in x has to obey those of `torch.tril_indices`. The masked diagonal elements of L are
+        transformed with `torch.exp`. The mask `exp_diag_mask` thus have to be a batched binary
+        tensor of size n, where (n, n) corresponds to the size of the matrices L.
 
         Args:
             x: batched n * (n + 1) / 2 elements of the batched (n, n) triangular matrices L
-            n: n
-            exp_diag: transform diagonal element with `torch.exp`
+            exp_diag_mask: batched binary mask of size n
 
         Returns:
             Batched product L @ L.T
         """
-        b, _ = x.shape
+        b, n = exp_diag_mask.shape
         idx = torch.tril_indices(n, n)
-        y = torch.zeros((b, n, n))
-        y[:, idx[0], idx[1]] = self.exp_diag(x, n) if exp_diag else x
+        y = torch.zeros((b, n, n), dtype=x.dtype)
+        y[:, idx[0], idx[1]] = self.exp_diag(x, exp_diag_mask)
+
         return torch.matmul(y, y.transpose(1, 2))
 
     def get_sigma_points(self,
@@ -264,11 +272,27 @@ class UKFCell(nn.Module):
         return y, new_state, new_state_cov
 
     def process_noise_cov(self, ctrl: torch.Tensor = torch.tensor(0)) -> torch.Tensor:
-        return self.tril_square(self.process_noise,
-                                self.state_size,
-                                exp_diag=self.log_cholesky)
+        """
+        Getter for the process noise covariance matrix
+
+        Args:
+            ctrl: control-input
+
+        Returns:
+            Process noise covariance matrix
+        """
+        mask = torch.tensor(self.log_cholesky).repeat(self.batch_size, self.state_size)
+        return self.tril_square(self.process_noise, exp_diag_mask=mask)
 
     def measurement_noise_cov(self, ctrl: torch.Tensor = torch.tensor(0)) -> torch.Tensor:
-        return self.tril_square(self.measurement_noise,
-                                self.measurement_size,
-                                exp_diag=self.log_cholesky)
+        """
+        Getter for the measurement noise covariance matrix
+
+        Args:
+            ctrl: control-input
+
+        Returns:
+            Measurement noise covariance matrix
+        """
+        mask = torch.tensor(self.log_cholesky).repeat(self.batch_size, self.measurement_size)
+        return self.tril_square(self.measurement_noise, exp_diag_mask=mask)
