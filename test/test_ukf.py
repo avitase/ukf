@@ -20,7 +20,7 @@ class MyCell(nn.Module):
 
 
 def test_kfrnn():
-    cell = ukf.KFRNN(MyCell())
+    cell = ukf.UKF(MyCell())
     cell = torch.jit.script(cell)
 
     torch.manual_seed(0)

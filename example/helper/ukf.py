@@ -55,16 +55,16 @@ class SimpleUKFCell(ukf.UKFCell):
         return xs[:, 0:2]
 
 
-class SimpleUKFRNN(ukf.KFRNN):
+class SimpleUKF(ukf.UKF):
     def __init__(self, *args, **kwargs):
-        super(SimpleUKFRNN, self).__init__(cell=SimpleUKFCell(*args, **kwargs))
+        super(SimpleUKF, self).__init__(cell=SimpleUKFCell(*args, **kwargs))
 
     def forward(self,
                 measurements: torch.Tensor,
                 state: torch.Tensor,
                 state_cov: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         ctrl = torch.tensor(0)
-        return super(SimpleUKFRNN, self).forward(measurements, state, state_cov, ctrl)
+        return super(SimpleUKF, self).forward(measurements, state, state_cov, ctrl)
 
     @property
     def process_noise(self) -> torch.tensor:
@@ -143,7 +143,7 @@ def init_ukf(*, batch_size: int, debug: bool = True) -> torch.Tensor:
             print('Warning! Found {torch.sum(sel)} NaN values in gradient')
             return new_grad
 
-    rnn = SimpleUKFRNN(batch_size=batch_size, log_cholesky=True)
+    rnn = SimpleUKF(batch_size=batch_size, log_cholesky=True)
 
     rnn.cell.process_noise.register_hook(_reinit_nans)
     rnn.cell.process_noise.register_hook(_constrain_process_noise)
