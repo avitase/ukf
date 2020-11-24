@@ -19,7 +19,7 @@ class MyCell(nn.Module):
         return x * 2, state * 2, state_cov * 2
 
 
-def test_kfrnn():
+def test_ukf():
     cell = ukf.UKF(MyCell())
     cell = torch.jit.script(cell)
 
