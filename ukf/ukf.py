@@ -21,7 +21,10 @@ class UKF(nn.Module):
             measurements: batched measurements as (b, m, s) tensor
             state: batched initial state as (b, n) tensor
             state_cov: batched initial state covariance as (b, n, n) tensor
-            ctrl: batched control-inputs of motion model
+            ctrl: batched control-inputs of motion model (cf. Notes)
+
+        Notes:
+            The control-inputs for the i-th iteration are passed as `ctrl[:, i]`.
 
         Returns:
             Batched predictions, states and state covariances of each step
