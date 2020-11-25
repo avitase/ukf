@@ -9,7 +9,7 @@ import ukf
 class MyCell(nn.Module):
     def __init__(self):
         super(MyCell, self).__init__()
-        self.ctrl_acc = torch.tensor(0, dtype=torch.int)
+        self.ctrl_acc = torch.tensor([0, ], dtype=torch.int)
 
     def forward(self,
                 x: torch.Tensor,
@@ -29,7 +29,7 @@ def test_ukf():
     init_state = torch.randint(high=10, size=(2, 4))
     init_state_cov = torch.randint(high=10, size=(2, 4, 4))
 
-    ctrl = torch.arange(6, dtype=torch.int)
+    ctrl = torch.arange(6, dtype=torch.int).unsqueeze(0)
     preds, states, state_covs = myUKF(x, init_state, init_state_cov, ctrl)
     assert preds.shape == (2, 3, 6)
     assert states.shape == (2, 4, 6)
