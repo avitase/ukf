@@ -63,7 +63,7 @@ class UKFCell(nn.Module):
         """
         return state
 
-    def error(self, measurement: torch.Tensor, prediction: torch.Tensor) -> torch.Tensor:
+    def error(self, prediction: torch.Tensor, measurement: torch.Tensor) -> torch.Tensor:
         """
         Error of prediction w.r.t. measurement
 
@@ -73,6 +73,9 @@ class UKFCell(nn.Module):
 
         Returns:
             Batched error of prediction w.r.t. measurement
+
+        Notes:
+            Mind the sign convention! The default should be `prediction - measurement`.
         """
         return prediction - measurement
 
@@ -266,7 +269,7 @@ class UKFCell(nn.Module):
         gain = torch.matmul(cov_sy, y_cov.inverse())
 
         # correct state and state covariance
-        new_state = x + torch.matmul(gain, -self.error(measurement, y).unsqueeze(2)).squeeze(2)
+        new_state = x + torch.matmul(gain, -self.error(y, measurement).unsqueeze(2)).squeeze(2)
         new_state_cov = x_cov - torch.matmul(gain, torch.matmul(y_cov, gain.transpose(1, 2)))
 
         return y, new_state, new_state_cov
