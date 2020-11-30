@@ -106,14 +106,10 @@ class UKFCell(nn.Module):
         i = torch.arange(n, dtype=torch.long)  # 0, 1, 2, 3, ...
         j = (i * (i + 3)) // 2  # 0, 2, 5, 9, ...
 
-        m1 = torch.tensor(False).repeat(x.shape)
-        m1[:, j] = mask
+        m = torch.tensor(False).repeat(x.shape)
+        m[:, j] = mask
 
-        m2 = torch.zeros_like(x, dtype=x.dtype)
-        m2[:, j] = 1.
-        m2[~m1] = 0.
-
-        return (1. - m2) * x + m2 * torch.exp(x)
+        return torch.where(m, torch.exp(x), x)
 
     def tril_square(self, x: torch.Tensor, exp_diag_mask: torch.Tensor) -> torch.Tensor:
         """
