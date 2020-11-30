@@ -28,14 +28,13 @@ class UKF(nn.Module):
 
         Returns:
             Batched predictions, states and state covariances of each step
-
         """
         _, _, s = measurements.shape
         b, n = state.shape
 
         preds = torch.empty_like(measurements)
-        states = torch.empty((b, n, s + 1))
-        state_covs = torch.empty((b, n, n, s + 1))
+        states = torch.empty(b, n, s + 1)
+        state_covs = torch.empty(b, n, n, s + 1)
 
         states[:, :, 0] = state
         state_covs[:, :, :, 0] = state_cov

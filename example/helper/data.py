@@ -21,7 +21,7 @@ class DataLoader:
             s = torch.sin(x)
 
             b, = x.shape
-            r = torch.empty((b, 2, 2))
+            r = torch.empty(b, 2, 2)
             r[:, 0, 0] = c
             r[:, 0, 1] = -s
             r[:, 1, 0] = s
@@ -29,7 +29,7 @@ class DataLoader:
             return r
 
         b, = phi.shape
-        vs = torch.empty((b, 2, 3 * tau * n_repeat))
+        vs = torch.empty(b, 2, 3 * tau * n_repeat)
 
         v = (v0.unsqueeze(1) * torch.tensor([[1., 0.], ])).unsqueeze(2)
         v = torch.matmul(_rot(phi), v)
@@ -45,7 +45,7 @@ class DataLoader:
                 vs[:, :, begin:end] = v
                 v = torch.matmul(rot, v)
 
-        self._gt = torch.zeros((b, 2, n * n_repeat))
+        self._gt = torch.zeros(b, 2, n * n_repeat)
         self._gt[:, :, 1:] = torch.cumsum(vs[:, :, :-1], dim=2)
 
         if noise is None:
