@@ -27,9 +27,9 @@ class UKFCell(nn.Module):
         self.log_cholesky = log_cholesky
 
         b, n, m = batch_size, state_size, measurement_size
-        self.process_noise = nn.Parameter(torch.zeros((b, ((n + 1) * n) // 2)),
+        self.process_noise = nn.Parameter(torch.zeros(b, ((n + 1) * n) // 2),
                                           requires_grad=True)
-        self.measurement_noise = nn.Parameter(torch.zeros((b, ((m + 1) * m) // 2)),
+        self.measurement_noise = nn.Parameter(torch.zeros(b, ((m + 1) * m) // 2),
                                               requires_grad=True)
 
     def motion_model(self, state: torch.Tensor, ctrl: torch.Tensor) -> torch.Tensor:
