@@ -81,7 +81,7 @@ class UKFCell(nn.Module):
 
     def exp_diag(self, x: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         """
-        Transforms diagonal of batched linearized triangular matricies with `torch.exp`
+        Transforms diagonal of batched linearized triangular matrices with `torch.exp`
 
         The sequence [a, b, c, d, e, f, g, h, i, j, ...] is transformed into
         [exp'(a), b, exp'(c), d, e, exp'(f), g, h, i, exp'(j), ...]. If [a, b, c, ...] is the
@@ -100,7 +100,7 @@ class UKFCell(nn.Module):
             mask: batched masks
 
         Returns:
-            Transformed batched matricies
+            Transformed batched matrices
         """
         _, n = mask.shape
         i = torch.arange(n, dtype=torch.long)  # 0, 1, 2, 3, ...
